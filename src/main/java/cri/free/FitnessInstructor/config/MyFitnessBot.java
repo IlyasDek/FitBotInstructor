@@ -1,6 +1,6 @@
 package cri.free.FitnessInstructor.config;
 
-import cri.free.FitnessInstructor.config.BotConfig;
+import cri.free.FitnessInstructor.services.ChatGPTService;
 import cri.free.FitnessInstructor.services.UserProfileService;
 import cri.free.FitnessInstructor.services.QuizService;
 import cri.free.FitnessInstructor.telegram.MessageHandler;
@@ -16,9 +16,9 @@ public class MyFitnessBot extends TelegramLongPollingBot {
 
 
     @Autowired
-    public MyFitnessBot(BotConfig botConfig, QuizService quizService, UserProfileService userProfileService) {
+    public MyFitnessBot(BotConfig botConfig, QuizService quizService, UserProfileService userProfileService, ChatGPTService chatGPTService) {
         this.botConfig = botConfig;
-        this.messageHandler = new MessageHandler(this, userProfileService, quizService);
+        this.messageHandler = new MessageHandler(this, userProfileService, quizService, chatGPTService);
     }
 
     @Override

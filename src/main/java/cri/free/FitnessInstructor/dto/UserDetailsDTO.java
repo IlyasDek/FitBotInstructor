@@ -1,28 +1,36 @@
 package cri.free.FitnessInstructor.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import javax.validation.constraints.*;
+import org.jetbrains.annotations.NotNull;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserProfileDTO {
+public class UserDetailsDTO {
     private Long id;
     @NotNull
-    private long chatId;
+    private Long userId;
     @NotBlank
     private String gender;
     @Min(1)
     @Max(120)
+    @Positive
     private int age;
     @Positive
-    private double height;
+    private Double height;
     @Positive
-    private double weight;
+    private Double weight;
     @NotBlank
     private String fitnessLevel;
     @NotBlank
@@ -31,5 +39,6 @@ public class UserProfileDTO {
     @Max(7)
     private int daysPerWeek;
     private String limitations;
-    private boolean hasSubscription;
+    private String chatgptResponse;
+    private LocalDateTime questionnaireDate;
 }

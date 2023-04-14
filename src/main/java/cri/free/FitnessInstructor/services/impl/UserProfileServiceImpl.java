@@ -1,116 +1,169 @@
 package cri.free.FitnessInstructor.services.impl;
 
 
-import cri.free.FitnessInstructor.dto.UserProfileDTO;
-import cri.free.FitnessInstructor.models.UserProfile;
-import cri.free.FitnessInstructor.repo.UserProfileRepository;
+import cri.free.FitnessInstructor.dto.UserDTO;
+import cri.free.FitnessInstructor.dto.UserDetailsDTO;
+import cri.free.FitnessInstructor.models.User;
+import cri.free.FitnessInstructor.models.UserDetails;
+import cri.free.FitnessInstructor.quiz.QuizHandler;
+import cri.free.FitnessInstructor.repo.UserDetailsRepository;
+import cri.free.FitnessInstructor.repo.UserRepository;
 import cri.free.FitnessInstructor.services.UserProfileService;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.BeanUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
-public class UserProfileServiceImpl implements UserProfileService {
+    public class UserProfileServiceImpl implements UserProfileService {
 
-    private final UserProfileRepository userProfileRepository;
+    private final UserRepository userRepository;
+    private final UserDetailsRepository userDetailsRepository;
+    private static final Logger logger = LoggerFactory.getLogger(QuizHandler.class);
 
+    // User methods
     @Override
-    public UserProfileDTO saveUserProfile(UserProfileDTO userProfileDto) {
-        UserProfile userProfile = new UserProfile();
-        BeanUtils.copyProperties(userProfileDto, userProfile);
-        userProfile = userProfileRepository.save(userProfile);
-        BeanUtils.copyProperties(userProfile, userProfileDto);
-        return userProfileDto;
+    public User saveUser(User user) {
+        return userRepository.save(user);
     }
 
     @Override
-    public UserProfileDTO findUserProfileById(Long id) {
-        UserProfile userProfile = userProfileRepository.findById(id).orElse(null);
-        if (userProfile != null) {
-            UserProfileDTO userProfileDto = new UserProfileDTO();
-            BeanUtils.copyProperties(userProfile, userProfileDto);
-            return userProfileDto;
+    public UserDTO findUserByChatId(Long chatId) {
+        User user = userRepository.findByChatId(chatId).orElse(null);
+        if (user != null) {
+            return convertToDTO(user);
+        }
+        return null;
+    }
+
+    // UserDetails methods
+    @Override
+    public UserDetails saveUserDetails(UserDetails userDetails) {
+//        return userDetailsRepository.save(userDetails);
+        logger.info("Saving user details: {}", userDetails.getChatgptResponse());
+        logger.info("Saved user details: {}", userDetails.getQuestionnaireDate());
+        UserDetails savedUserDetails = userDetailsRepository.save(userDetails);
+        logger.info("Saved user details: {}", savedUserDetails.getChatgptResponse());
+        logger.info("Saved user details: {}", savedUserDetails.getQuestionnaireDate());
+        return savedUserDetails;
+    }
+
+    @Override
+    public UserDetailsDTO findUserDetailsByUserId(Long userId) {
+        UserDetails userDetails = userDetailsRepository.findByUserId(userId).orElse(null);
+        if (userDetails != null) {
+            return convertToDTO(userDetails);
         }
         return null;
     }
 
     @Override
-    public List<UserProfileDTO> findAllUserProfiles() {
-        List<UserProfile> userProfiles = userProfileRepository.findAll();
-        List<UserProfileDTO> userProfileDTOs = new ArrayList<>();
-        for (UserProfile userProfile : userProfiles) {
-            UserProfileDTO userProfileDto = new UserProfileDTO();
-            BeanUtils.copyProperties(userProfile, userProfileDto);
-            userProfileDTOs.add(userProfileDto);
-        }
-        return userProfileDTOs;
+    public List<UserDetailsDTO> findAllUserDetails() {
+        List<UserDetails> userDetailsList = userDetailsRepository.findAll();
+        return userDetailsList.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public void deleteUserProfileById(Long id) {
-        userProfileRepository.deleteById(id);
+    public void deleteUserDetailsById(Long id) {
+        userDetailsRepository.deleteById(id);
     }
+
+    // Subscription methods
     @Override
     public boolean isUserSubscribed(Long chatId) {
         try {
-
-            Optional<UserProfile> userProfileOptional = userProfileRepository.findByChatId(chatId);
-            return userProfileOptional.map(UserProfile::isHasSubscription).orElse(false);
-        }catch (Exception e) {
+            Optional<User> userOptional = userRepository.findByChatId(chatId);
+            return userOptional.map(User::isHasSubscription).orElse(false);
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
 
-    public List<String> getUserContextFromDatabase(long chatId) {
-        if (isUserSubscribed(chatId)) {
-            // В данном примере возвращается пустой список
-            return new ArrayList<>();
+   @Override
+    public boolean subscribeUser(Long chatId) {
+        Optional<User> userOptional = userRepository.findByChatId(chatId);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+
+            if (!user.isHasSubscription()) {
+                user.setHasSubscription(true);
+                userRepository.save(user);
+            }
+
+            return true;
         } else {
-            // Возвращаем стандартный контекст или пустой контекст для неподписанных пользователей
-            return getDefaultOrEmptyUserContext();
+            User newUser = new User();
+            newUser.setChatId(chatId);
+            newUser.setHasSubscription(true);
+
+            userRepository.save(newUser);
+
+            return true;
         }
     }
-
-    private List<String> getDefaultOrEmptyUserContext() {
-        return new ArrayList<>();
+    public User convertToEntity(UserDTO userDTO) {
+        User user = new User();
+        user.setChatId(userDTO.getChatId());
+        user.setHasSubscription(userDTO.isHasSubscription());
+        return user;
     }
 
-    public UserProfileDTO convertToDTO(UserProfile userProfile) {
-        return UserProfileDTO.builder()
-                .id(userProfile.getId())
-                .chatId(userProfile.getChatId())
-                .gender(userProfile.getGender())
-                .age(userProfile.getAge())
-                .height(userProfile.getHeight())
-                .weight(userProfile.getWeight())
-                .fitnessLevel(userProfile.getFitnessLevel())
-                .fitnessGoal(userProfile.getFitnessGoal())
-                .daysPerWeek(userProfile.getDaysPerWeek())
-                .limitations(userProfile.getLimitations())
-                .hasSubscription(userProfile.isHasSubscription())
-                .build();
+    public UserDTO convertToDTO(User user) {
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(user.getId());
+        userDTO.setChatId(user.getChatId());
+        userDTO.setHasSubscription(user.isHasSubscription());
+        return userDTO;
     }
 
-    // Convert UserProfileDTO to UserProfile
-    public UserProfile convertToEntity(UserProfileDTO userProfileDTO) {
-        return UserProfile.builder()
-                .id(userProfileDTO.getId())
-                .chatId(userProfileDTO.getChatId())
-                .gender(userProfileDTO.getGender())
-                .age(userProfileDTO.getAge())
-                .height(userProfileDTO.getHeight())
-                .weight(userProfileDTO.getWeight())
-                .fitnessLevel(userProfileDTO.getFitnessLevel())
-                .fitnessGoal(userProfileDTO.getFitnessGoal())
-                .daysPerWeek(userProfileDTO.getDaysPerWeek())
-                .limitations(userProfileDTO.getLimitations())
-                .hasSubscription(userProfileDTO.isHasSubscription())
-                .build();
+    public UserDetails convertToEntity(UserDetailsDTO userDetailsDTO) {
+        UserDetails userDetails = new UserDetails();
+        Long userId = userDetailsDTO.getUserId();
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user != null) {
+                userDetails.setUser(user);
+            }
+        }
+        userDetails.setGender(userDetailsDTO.getGender());
+        userDetails.setFitnessLevel(userDetailsDTO.getFitnessLevel());
+        userDetails.setFitnessGoal(userDetailsDTO.getFitnessGoal());
+        userDetails.setAge(userDetailsDTO.getAge());
+        userDetails.setDaysPerWeek(userDetailsDTO.getDaysPerWeek());
+        userDetails.setHeight(userDetailsDTO.getHeight());
+        userDetails.setWeight(userDetailsDTO.getWeight());
+        userDetails.setLimitations(userDetailsDTO.getLimitations());
+        userDetails.setChatgptResponse(userDetailsDTO.getChatgptResponse());
+        userDetails.setQuestionnaireDate(userDetailsDTO.getQuestionnaireDate());
+        return userDetails;
     }
+
+    public UserDetailsDTO convertToDTO(UserDetails userDetails) {
+        UserDetailsDTO userDetailsDTO = new UserDetailsDTO();
+        User user = userDetails.getUser();
+        if (user != null) {
+            userDetailsDTO.setUserId(user.getId());
+        }
+        userDetailsDTO.setGender(userDetails.getGender());
+        userDetailsDTO.setFitnessLevel(userDetails.getFitnessLevel());
+        userDetailsDTO.setFitnessGoal(userDetails.getFitnessGoal());
+        userDetailsDTO.setAge(userDetails.getAge());
+        userDetailsDTO.setDaysPerWeek(userDetails.getDaysPerWeek());
+        userDetailsDTO.setHeight(userDetails.getHeight());
+        userDetailsDTO.setWeight(userDetails.getWeight());
+        userDetailsDTO.setLimitations(userDetails.getLimitations());
+        userDetailsDTO.setChatgptResponse(userDetails.getChatgptResponse());
+        userDetailsDTO.setQuestionnaireDate(userDetails.getQuestionnaireDate());
+        return userDetailsDTO;
+    }
+
 }

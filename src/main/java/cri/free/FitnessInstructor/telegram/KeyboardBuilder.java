@@ -2,6 +2,9 @@ package cri.free.FitnessInstructor.telegram;
 
 import cri.free.FitnessInstructor.models.Option;
 import cri.free.FitnessInstructor.models.Question;
+import cri.free.FitnessInstructor.services.UserProfileService;
+import cri.free.FitnessInstructor.services.impl.UserProfileServiceImpl;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -9,26 +12,37 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+@Component
 public class KeyboardBuilder {
-    public InlineKeyboardMarkup createStartButton() {
+
+    private final UserProfileService userProfileService;
+
+    public KeyboardBuilder(UserProfileService userProfileService) {
+        this.userProfileService = userProfileService;
+    }
+    public InlineKeyboardMarkup createStartButton(long chatId) {
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton startButton = new InlineKeyboardButton();
         startButton.setText("Начать");
         startButton.setCallbackData("/startQuiz");
 
-        InlineKeyboardButton subscribeButton = new InlineKeyboardButton();
-        subscribeButton.setText("Купить подписку");
-        subscribeButton.setCallbackData("subscribe");
+        row1.add(startButton);
+        rows.add(row1);
 
-        List<InlineKeyboardButton> row = new ArrayList<>();
-        row.add(startButton);
-        row.add(subscribeButton);
+        if (!userProfileService.isUserSubscribed(chatId)) {
+            List<InlineKeyboardButton> row2 = new ArrayList<>();
+            InlineKeyboardButton subscribeButton = new InlineKeyboardButton();
+            subscribeButton.setText("Купить подписку");
+            subscribeButton.setCallbackData("/subscribe");
+            row2.add(subscribeButton);
+            rows.add(row2);
+        }
 
-        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
-        keyboard.add(row);
-
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        markup.setKeyboard(keyboard);
-        return markup;
+        inlineKeyboardMarkup.setKeyboard(rows);
+        return inlineKeyboardMarkup;
     }
 
     public InlineKeyboardMarkup getKeyboardForQuestion(Question question) {

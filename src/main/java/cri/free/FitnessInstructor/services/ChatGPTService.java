@@ -11,30 +11,22 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class ChatGPTService {
-    private static final String API_KEY = "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";
+    private String API_KEY;
     private static final String API_URL = "https://api.openai.com/v1/chat/completions";
     private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private OkHttpClient client;
     private JsonParserUtil jsonParserUtil;
-    @Autowired
-    public ChatGPTService(JsonParserUtil jsonParserUtil) {
-        this.jsonParserUtil = jsonParserUtil;
-    }
-
-    private OkHttpClient createCustomOkHttpClient() {
-        return new OkHttpClient.Builder()
-                .readTimeout(5, TimeUnit.MINUTES)
-                .writeTimeout(5, TimeUnit.MINUTES)
-                .connectTimeout(5, TimeUnit.MINUTES)
-                .build();
-    }
-    private OkHttpClient client = createCustomOkHttpClient();
-
-
     private Gson gson = new Gson();
+
+    @Autowired
+    public ChatGPTService(JsonParserUtil jsonParserUtil, String apiKey, OkHttpClient okHttpClient) {
+        this.jsonParserUtil = jsonParserUtil;
+        this.API_KEY = apiKey;
+        this.client = okHttpClient;
+    }
 
 
     public String getResponseFromChatGPTAPI(List<String> userAnswers) {
